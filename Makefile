@@ -10,7 +10,7 @@ css:
 templ:
 	@templ generate --watch --proxy=http://localhost:3000
 
-build:
+build: css
 	@templ generate view
 	@go build -tags prod -o bin/localstorage main.go 
 

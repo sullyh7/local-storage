@@ -1,11 +1,85 @@
 package home
 
-import "github.com/sullyh7/local-storage/view/layout"
+import (
+	"fmt"
+	"github.com/bwmarrin/discordgo"
+	"github.com/sullyh7/local-storage/view/layout"
+)
 
 templ Index() {
 	@layout.App(true) {
-		<div>
-			<h1>welcome to local storage.</h1>
+		<div class="flex flex-col gap-y-[8rem] mt-5">
+			<h1 class="text-[4rem]"><a class="underline">welcome to local storage.</a></h1>
+			<div>
+				@Form(FormProps{Success: false, Message: ""})
+				<div>
+					<h2>all files:</h2>
+					<div hx-get="/action/get-files" hx-trigger="load">
+						<article aria-busy="true"></article>
+					</div>
+				</div>
+			</div>
 		</div>
 	}
+}
+
+type FormProps struct {
+	Success bool
+	Message string
+}
+
+templ Form(props FormProps) {
+	<form
+		id="form"
+		hx-encoding="multipart/form-data"
+		hx-post="/action/upload"
+		hx-swap="outerHTML"
+		hx-indicator="#load"
+	>
+		<label><h2>upload a new file</h2></label>
+		<input
+			type="text"
+			name="name"
+			placeholder="file name"
+			required
+		/>
+		<input
+			type="file"
+			name="file"
+			placeholder="message..."
+			required
+		/>
+		<article id="load" class="htmx-indicator" aria-busy="true"></article>
+		if len(props.Message) > 0 {
+			<p
+				if props.Success {
+					class="text-green-500"
+				} else {
+					class="text-red-700"
+				}
+			>{ props.Message }</p>
+		}
+		<input type="submit"/>
+	</form>
+}
+
+templ Files(ms []*discordgo.Message) {
+	<div id="files" class="flex flex-col items-center justify-center">
+		for _,f := range ms {
+			@File(f)
+		}
+	</div>
+}
+
+templ File(f *discordgo.Message) {
+	<article class="w-full">
+		if f.Attachments[0].ContentType == "image/png" || f.Attachments[0].ContentType == "image/jpg" {
+			<img src={ f.Attachments[0].URL }/>
+		}
+		<h3><a href={ templ.SafeURL(f.Attachments[0].URL) }>{ f.Attachments[0].Filename }</a></h3>
+		<p>{ fmt.Sprintf("%d", f.Attachments[0].Size ) } bytes</p>
+		<button hx-delete={ fmt.Sprintf("/action/delete/%s", f.ID) } hx-target="#files" hx-swap="afterend">
+			Delete
+		</button>
+	</article>
 }
